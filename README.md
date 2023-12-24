@@ -10,7 +10,7 @@
 
 ## Usage Examples
 
-### Importing Necessary Modules
+#### Importing Necessary Modules
 
 ```python
 from pymodeltime import ArimaReg, ProphetReg
@@ -20,7 +20,7 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 ```
 
-### Create instances of the ML models
+##### Create instances of the ML models
 ```
 rf_model = RandomForestRegressor()
 ml_rf_wrapper = MLModelWrapper(rf_model, feature_columns, "Random Forest")
