@@ -18,7 +18,7 @@ from pymodeltime import ModelTimeTable, ModelTimeAccuracy, ModelTimeCalibration,
 from pymodeltime import MLModelWrapper, H2OAutoMLWrapper
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
-
+```
 # Create instances of the ML models
 rf_model = RandomForestRegressor()
 ml_rf_wrapper = MLModelWrapper(rf_model, feature_columns, "Random Forest")
