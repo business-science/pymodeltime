@@ -5,5 +5,5 @@
 
 
 ```
-!pip install git+https://github.com/Shafi2016/ChatOpenLLM.git
+!pip install git+https://github.com/Shafi2016/pymodeltime.git
 ```
