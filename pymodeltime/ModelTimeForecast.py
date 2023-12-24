@@ -472,12 +472,14 @@ class ModelTimeForecast:
 
     ##
     def _create_future_dataframe(self, periods):
-        """
-        Create a DataFrame for future dates.
-        """
+        # Ensure 'date' column is datetime
+        self.actual_data['date'] = pd.to_datetime(self.actual_data['date'])
+
+        # Create future dates
         last_date_in_data = self.actual_data['date'].max()
         future_dates = pd.date_range(start=last_date_in_data + pd.Timedelta(days=1), periods=periods, freq='M')
         return pd.DataFrame({'date': future_dates})
+
 
 
     ##
