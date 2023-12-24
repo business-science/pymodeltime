@@ -78,7 +78,7 @@ class ModelTimeForecast:
     ##
     def _prophet_future_forecast(self, model, future_data):
         # Specialized method for Prophet future forecasts
-        #print("Original future_data:", future_data.head())  # Debug: Check the initial future_data
+        print("Original future_data:", future_data.head())  # Debug: Check the initial future_data
 
         # Ensure the data is in the correct format for Prophet
         if 'ds' not in future_data.columns:
@@ -87,7 +87,7 @@ class ModelTimeForecast:
             else:
                 raise ValueError("Missing 'ds' column for Prophet future forecast.")
 
-        #print("Processed future_data for Prophet:", future_data.head())  # Debug: Check the processed future_data
+        print("Processed future_data for Prophet:", future_data.head())  # Debug: Check the processed future_data
 
         # Direct prediction using Prophet model
         prophet_future_forecast = model.predict(future_data)
