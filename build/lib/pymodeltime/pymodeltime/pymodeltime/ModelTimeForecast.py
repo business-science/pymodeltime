@@ -481,6 +481,7 @@ class ModelTimeForecast:
         return pd.DataFrame({'date': future_dates})
 
 
+
     ##
     def _parse_forecast_horizon(self, horizon_str):
           """

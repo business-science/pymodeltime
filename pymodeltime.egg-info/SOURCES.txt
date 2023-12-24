@@ -1,3 +1,5 @@
+LICENSE
+README.md
 setup.py
 pymodeltime/ArimaReg.py
 pymodeltime/H2OAutoMLWrapper.py
@@ -15,3 +17,16 @@ pymodeltime.egg-info/SOURCES.txt
 pymodeltime.egg-info/dependency_links.txt
 pymodeltime.egg-info/requires.txt
 pymodeltime.egg-info/top_level.txt
+pymodeltime/pymodeltime/__init__.py
+pymodeltime/pymodeltime/setup.py
+pymodeltime/pymodeltime/pymodeltime/ArimaReg.py
+pymodeltime/pymodeltime/pymodeltime/H2OAutoMLWrapper.py
+pymodeltime/pymodeltime/pymodeltime/MLModelWrapper.py
+pymodeltime/pymodeltime/pymodeltime/ModelTimeAccuracy.py
+pymodeltime/pymodeltime/pymodeltime/ModelTimeCalibration.py
+pymodeltime/pymodeltime/pymodeltime/ModelTimeForecast.py
+pymodeltime/pymodeltime/pymodeltime/ModelTimeRefit.py
+pymodeltime/pymodeltime/pymodeltime/ModelTimeTable.py
+pymodeltime/pymodeltime/pymodeltime/ProphetReg.py
+pymodeltime/pymodeltime/pymodeltime/__init__.py
+pymodeltime/pymodeltime/pymodeltime/plot_modeltime_forecast.py
