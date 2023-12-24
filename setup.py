@@ -18,7 +18,7 @@ setup(
         'h2o'
     ],
     package_data={
-        '': ['data/*']  # Include data files at the package's root level
+        '': ['data/*'],  # Include data files
     },
     include_package_data=True,
 )
