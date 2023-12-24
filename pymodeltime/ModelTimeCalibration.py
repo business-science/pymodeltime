@@ -6,10 +6,10 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 import pandas as pd
 
-from MLModelWrapper import MLModelWrapper
-from H2OAutoMLWrapper import H2OAutoMLWrapper
-from ArimaReg import ArimaReg
-from ProphetReg import ProphetReg
+from .MLModelWrapper import MLModelWrapper
+from .H2OAutoMLWrapper import H2OAutoMLWrapper
+from .ArimaReg import ArimaReg
+from .ProphetReg import ProphetReg
 
 
 # Insert the definitions of ArimaReg, ProphetReg, MLModelWrapper, and H2OAutoMLWrapper here

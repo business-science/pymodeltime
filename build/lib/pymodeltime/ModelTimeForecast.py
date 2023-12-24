@@ -1,13 +1,12 @@
 from prophet import Prophet
-
-from .ModelTimeTable import ModelTimeTable
-import pandas as pd
-
-
 from .MLModelWrapper import MLModelWrapper
 from .H2OAutoMLWrapper import H2OAutoMLWrapper
 from .ArimaReg import ArimaReg
 from .ProphetReg import ProphetReg
+from .ModelTimeTable import ModelTimeTable
+import pandas as pd
+import h2o
+from h2o.automl import H2OAutoML
 
 class ModelTimeForecast:
     def __init__(self, model_container, actual_data, target_column, future_data=None, forecast_horizon=None,
