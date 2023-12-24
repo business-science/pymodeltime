@@ -17,8 +17,8 @@ setup(
         'scikit-learn',
         'h2o'
     ],
-    package_data={
-        '': ['data/*'],  # Include data files
+   package_data={
+        'pymodeltime': ['data.csv'],  # Include data.csv file
     },
     include_package_data=True,
 )
