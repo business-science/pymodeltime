@@ -29,7 +29,9 @@ setup(
         'pip>=20.0',
         'setuptools>=40.0',
         'wheel>=0.30',
-        *torch_requirements,
+        'torch',  # Remove the specific version
+        'torchvision',  # Remove the specific version
+        'autogluon',
         'autogluon',
         'prophet',
         'pmdarima',
