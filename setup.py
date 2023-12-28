@@ -4,10 +4,12 @@ setup(
     name='pymodeltime',
     version='0.1',
     packages=find_packages(),
-    author='Shafiullah Qureshi',
-    author_email='qureshi.shafiullah@gmail.com',
+    author='Shafiullah Qureshi, Matt Dancho',
+    author_email='qureshi.shafiullah@gmail.com, mdancho@business-science.io',
     install_requires=[
-        'pystan~=2.19.1.1',
+        'torch==2.0.1+cpu',
+        'torchvision==0.15.2+cpu',
+        'autogluon',
         'prophet',
         'pmdarima',
         'pandas',
@@ -18,7 +20,7 @@ setup(
         'h2o'
     ],
     package_data={
-        'pymodeltime': ['data/*']  # Include data files within the pymodeltime package
+        'pymodeltime': ['data/*']
     },
     include_package_data=True
 )

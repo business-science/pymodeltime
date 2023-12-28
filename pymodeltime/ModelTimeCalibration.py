@@ -1,3 +1,4 @@
+
 from ipywidgets import interact
 import pandas as pd
 import h2o
@@ -11,8 +12,9 @@ from .H2OAutoMLWrapper import H2OAutoMLWrapper
 from .ArimaReg import ArimaReg
 from .ProphetReg import ProphetReg
 
+from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
 
-# Insert the definitions of ArimaReg, ProphetReg, MLModelWrapper, and H2OAutoMLWrapper here
+
 class ModelTimeCalibration:
     def __init__(self, model_time_table, new_data, target_column):
         self.model_time_table = model_time_table
@@ -21,7 +23,13 @@ class ModelTimeCalibration:
 
     def calibrate(self):
         for model in self.model_time_table.models:
-            if isinstance(model, ProphetReg):
+
+            if isinstance(model, AutoGluonTabularWrapper):
+                X = self.new_data.drop(columns=[self.target_column])
+                y = self.new_data[self.target_column]
+                model.calibrate(X, y)
+
+            elif isinstance(model, ProphetReg):
                 self._calibrate_prophet(model)
             elif isinstance(model, ArimaReg):
                 self._calibrate_arima(model)
@@ -29,6 +37,57 @@ class ModelTimeCalibration:
                 self._calibrate_ml_model(model)
             elif isinstance(model, H2OAutoMLWrapper):
                 self._calibrate_h2o_automl(model)
+
+    ##
+    def _calibrate_auto_gluon_tabular(self, model):
+        print("Starting calibration for AutoGluonTabular model...")  # Debug print
+
+        if model.predictor is None:
+            print("AutoGluonTabular model is not trained. Skipping calibration.")
+            return
+
+        X = self.new_data.drop(columns=[self.target_column])
+        y = self.new_data[self.target_column]
+
+        try:
+            predictions = model.predict(X)
+            residuals = y - predictions
+
+            calibration_data = pd.DataFrame({
+                'actual': y,
+                'predicted': predictions,
+                'residuals': residuals
+            })
+
+            model.calibration_data = calibration_data
+            print("Calibration data set successfully for AutoGluonTabular model.")
+        except Exception as e:
+            print(f"Error during prediction in AutoGluonTabular model: {e}")
+
+        if hasattr(model, 'calibration_data'):
+            print("Calibration data:", model.calibration_data.head())  # Display first few rows of calibration data
+        else:
+            print("Calibration data NOT set for AutoGluonTabular model.")
+
+
+                
+              
+   
+    
+    def update_model_calibration_data(self, model_id, calibration_data):
+        """
+        Update the calibration data of a specific model in the model time table.
+        
+        Parameters:
+        model_id: The ID of the model to update.
+        calibration_data: The new calibration data for the model.
+        """
+        for model in self.model_time_table.models:
+            if getattr(model, 'model_id', None) == model_id:
+                model.calibration_data = calibration_data
+                print(f"Calibration data updated for model ID {model_id}.")
+                return
+        print(f"No model found with ID {model_id} to update.")
 
     def _calibrate_prophet(self, model):
         prophet_data = self.new_data.copy()
@@ -79,8 +138,11 @@ class ModelTimeCalibration:
     def get_calibration_results(self):
         calibration_results = []
         for model in self.model_time_table.models:
-            if isinstance(model, MLModelWrapper):
-                model_desc = model.description  # Accessing the correct attribute
+            # Retrieve the actual model name for AutoGluonTabular models
+            if isinstance(model, AutoGluonTabularWrapper) and hasattr(model, 'actual_model_name'):
+                model_desc = model.actual_model_name
+            elif isinstance(model, MLModelWrapper):
+                model_desc = model.description
             else:
                 model_desc = getattr(model, 'description', 'Custom Model')
 

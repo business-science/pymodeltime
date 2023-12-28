@@ -5,6 +5,7 @@ from .MLModelWrapper import MLModelWrapper
 from .H2OAutoMLWrapper import H2OAutoMLWrapper
 from .ArimaReg import ArimaReg
 from .ProphetReg import ProphetReg
+from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
 
 class ModelTimeAccuracy:
     def __init__(self, model_time_table, new_data, target_column, metrics=None):
@@ -40,11 +41,19 @@ class ModelTimeAccuracy:
 
         return pd.DataFrame(results)
 
+    ##
     def _get_model_description(self, model):
         if isinstance(model, MLModelWrapper):
             return model.model_name  # Assuming MLModelWrapper has a 'model_name' attribute
+        elif isinstance(model, AutoGluonTabularWrapper):
+            # Retrieve the actual model name for AutoGluonTabularWrapper
+            return model.get_actual_model_name()
         else:
             return getattr(model, 'description', 'N/A')
+    def get_actual_model_name(self):
+        # Assuming there's a method or attribute in AutoGluonTabularWrapper that gives the actual model name
+        return self.actual_model_name if hasattr(self, 'actual_model_name') else 'AutoGluonTabular'
+        
 
     def generate_forecast_data(self, model):
         forecast_data = self.new_data.copy()
