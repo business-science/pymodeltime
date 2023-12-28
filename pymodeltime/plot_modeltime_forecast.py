@@ -4,17 +4,6 @@ import matplotlib.dates as mdates
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from .MLModelWrapper import MLModelWrapper
-from .H2OAutoMLWrapper import H2OAutoMLWrapper
-from .ArimaReg import ArimaReg
-from .ProphetReg import ProphetReg
-
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import matplotlib.pyplot as plt
-import pandas as pd
-import matplotlib.dates as mdates
-
 def plot_modeltime_forecast(df, date_col='date', value_col='value',
                             title="Model Time Forecast Plot", x_lab="Date", y_lab="Value", interactive=True):
     if interactive:
@@ -49,7 +38,10 @@ def plot_modeltime_forecast(df, date_col='date', value_col='value',
                                          fillcolor='rgba(68, 68, 68, 0.3)',
                                          showlegend=False))
 
-        fig.update_layout(title=title, xaxis_title=x_lab, yaxis_title=y_lab)
+        # Update layout for interactive plot with centered title
+        fig.update_layout(title=title, title_x=0.5,  # Center the title
+                          xaxis_title=x_lab, yaxis_title=y_lab,
+                          legend=dict(orientation="v", x=1.05, y=1, xanchor="left", yanchor="top"))
         return fig
     else:
         plt.figure(figsize=(12, 6))  # Adjusted for better visibility
@@ -77,10 +69,13 @@ def plot_modeltime_forecast(df, date_col='date', value_col='value',
         else:
             plt.gca().xaxis.set_major_formatter(mdates.ConciseDateFormatter(mdates.AutoDateLocator()))
 
-        plt.gcf().autofmt_xdate()
+        plt.gcf().autofmt_xdate(rotation=0)  # Set rotation to 0 for horizontal labels
         plt.title(title)
         plt.xlabel(x_lab)
         plt.ylabel(y_lab)
-        plt.legend()
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Move legend to the right side of the plot
         plt.show()
 
+# Example usage
+plot_modeltime_forecast(forecast_results_future, interactive=False)  # For static plot
+plot_modeltime_forecast(forecast_results_future, interactive=True)  # For interactive plot
