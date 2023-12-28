@@ -76,6 +76,4 @@ def plot_modeltime_forecast(df, date_col='date', value_col='value',
         plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Move legend to the right side of the plot
         plt.show()
 
-# Example usage
-plot_modeltime_forecast(forecast_results_future, interactive=False)  # For static plot
-plot_modeltime_forecast(forecast_results_future, interactive=True)  # For interactive plot
+
