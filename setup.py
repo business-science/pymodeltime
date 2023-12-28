@@ -1,5 +1,24 @@
 from setuptools import setup, find_packages
 
+# Define a helper function to determine if the platform is Windows
+def is_windows():
+    from sys import platform
+    return platform.startswith('win')
+
+# Define the torch and torchvision requirements
+torch_requirements = [
+    'torch==2.0.1+cpu;platform_system!="Windows"',
+    'torchvision==0.15.2+cpu;platform_system!="Windows"'
+]
+
+# If the system is Windows, use a different version or exclude these requirements
+if is_windows():
+    torch_requirements = [
+        # You can specify Windows-compatible versions or exclude them altogether
+        # 'torch',
+        # 'torchvision'
+    ]
+
 setup(
     name='pymodeltime',
     version='0.1',
@@ -7,8 +26,10 @@ setup(
     author='Shafiullah Qureshi, Matt Dancho',
     author_email='qureshi.shafiullah@gmail.com, mdancho@business-science.io',
     install_requires=[
-        'torch==2.0.1+cpu',
-        'torchvision==0.15.2+cpu',
+        'pip>=20.0',
+        'setuptools>=40.0',
+        'wheel>=0.30',
+        *torch_requirements,
         'autogluon',
         'prophet',
         'pmdarima',
