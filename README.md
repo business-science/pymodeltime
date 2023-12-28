@@ -3,7 +3,6 @@
 ### Installation
 
 
-
 ```
 !pip install git+https://github.com/Shafi2016/pymodeltime.git
 ```
@@ -20,7 +19,7 @@ from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 ```
 
-##### Create instances of the ML models
+##### Create instances of the ML models 
 ```
 rf_model = RandomForestRegressor()
 ml_rf_wrapper = MLModelWrapper(rf_model, feature_columns, "Random Forest")
@@ -31,6 +30,14 @@ ml_xgb_wrapper = MLModelWrapper(xgb_model, feature_columns, "XGBoost")
 # Fit the models
 ml_rf_wrapper.fit(train_data, y_train)
 ml_xgb_wrapper.fit(train_data, y_train)
+```
+#####  AutoGluon models 
+```
+from pymodeltime import AutoGluonTabularWrapper
+
+auto_gluon_wrapper = AutoGluonTabularWrapper(target_column="GDP")
+auto_gluon_wrapper.fit(train_data)
+quantile_predictions = auto_gluon_wrapper.predict_quantiles(test_data)
 ```
 #### H2O AutoML Integration
 
