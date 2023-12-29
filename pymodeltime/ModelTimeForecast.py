@@ -93,7 +93,7 @@ class ModelTimeForecast:
     ##
     def _prophet_future_forecast(self, model, future_data):
         # Specialized method for Prophet future forecasts
-        print("Original future_data:", future_data.head())  # Debug: Check the initial future_data
+        #print("Original future_data:", future_data.head())  # Debug: Check the initial future_data
 
         # Ensure the data is in the correct format for Prophet
         if 'ds' not in future_data.columns:
@@ -102,7 +102,7 @@ class ModelTimeForecast:
             else:
                 raise ValueError("Missing 'ds' column for Prophet future forecast.")
 
-        print("Processed future_data for Prophet:", future_data.head())  # Debug: Check the processed future_data
+        #print("Processed future_data for Prophet:", future_data.head())  # Debug: Check the processed future_data
 
         # Direct prediction using Prophet model
         prophet_future_forecast = model.predict(future_data)
@@ -124,7 +124,7 @@ class ModelTimeForecast:
 
     ##
     def _predict_future_data(self, model, future_data):
-        print(f"Processing future predictions for model: {type(model).__name__}")
+        #print(f"Processing future predictions for model: {type(model).__name__}")
         model_desc = self._get_model_type(model)  # Use _get_model_type to get the actual model type
         #model_id = getattr(model, 'id', 'N/A')  # Get the model's existing ID
         model_id = self.model_id_counter
@@ -522,11 +522,21 @@ class ModelTimeForecast:
     ##
     def _create_future_dataframe(self, periods):
         """
-        Create a DataFrame for future dates.
+        Create a future DataFrame with the specified number of periods.
         """
+        # Ensure the 'date' column is a datetime object
+        self.actual_data['date'] = pd.to_datetime(self.actual_data['date'])
+
+        # Get the last date in the data
         last_date_in_data = self.actual_data['date'].max()
-        future_dates = pd.date_range(start=last_date_in_data + pd.Timedelta(days=1), periods=periods, freq='M')
+
+        # Calculate the start date for the future date range
+        start_date = last_date_in_data + pd.Timedelta(days=1)
+
+        # Create the future date range
+        future_dates = pd.date_range(start=start_date, periods=periods, freq='M')
         return pd.DataFrame({'date': future_dates})
+
 
 
     ##
