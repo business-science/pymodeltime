@@ -1,4 +1,5 @@
 ### pymodeltime
+[Open in Colab](https://colab.research.google.com/drive/1CK6Zu_4lBYTkihyEQ1U_4wiViw2qjFBr?usp=sharing)
 
 ### Installation
 
