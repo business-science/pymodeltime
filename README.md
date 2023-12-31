@@ -5,7 +5,7 @@
 
 
 ```
-!pip install git+https://github.com/Shafi2016/pymodeltime.git
+!pip install git+https://github.com/business-science/pymodeltime.git
 ```
 
 ### Usage Examples
