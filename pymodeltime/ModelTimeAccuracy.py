@@ -7,6 +7,7 @@ from .ArimaReg import ArimaReg
 from .ProphetReg import ProphetReg
 from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
 
+
 class ModelTimeAccuracy:
     def __init__(self, model_time_table, new_data, target_column, metrics=None):
         self.model_time_table = model_time_table
@@ -48,15 +49,35 @@ class ModelTimeAccuracy:
         elif isinstance(model, AutoGluonTabularWrapper):
             # Retrieve the actual model name for AutoGluonTabularWrapper
             return model.get_actual_model_name()
+        elif isinstance(model, H2OAutoMLWrapper):
+            # Retrieve the best model name from H2OAutoMLWrapper
+            return self._get_model_type(model)
         else:
             return getattr(model, 'description', 'N/A')
+
     def get_actual_model_name(self):
         # Assuming there's a method or attribute in AutoGluonTabularWrapper that gives the actual model name
         return self.actual_model_name if hasattr(self, 'actual_model_name') else 'AutoGluonTabular'
-        
 
+
+    ##
+    def _get_model_type(self, model):
+        """ Utility function to get the type of the model. """
+        if isinstance(model, AutoGluonTabularWrapper):
+            return model.get_best_model() if hasattr(model, 'get_best_model') else 'AutoGluonTabular'
+        elif isinstance(model, ProphetReg):
+            return 'Prophet'
+        elif isinstance(model, ArimaReg):
+            return 'ARIMA'
+        elif isinstance(model, H2OAutoMLWrapper):
+            return model.model.model_id if model.model is not None else 'H2O AutoML'
+        elif isinstance(model, MLModelWrapper):
+            return model.model.__class__.__name__  # Get the class name of the underlying model
+        else:
+            return 'Unknown Model'
     def generate_forecast_data(self, model):
         forecast_data = self.new_data.copy()
         if isinstance(model, ProphetReg):
             forecast_data = forecast_data.rename(columns={'date': 'ds'})
         return forecast_data
+
