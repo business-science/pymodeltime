@@ -1,6 +1,5 @@
 
 #from AutoGluonTabularWrapper import AutoGluonTabularWrapper
-
 import pandas as pd
 from autogluon.tabular import TabularPredictor
 
@@ -17,7 +16,7 @@ class AutoGluonTabularWrapper:
         self.train_data = None
         #AutoGluonTabularWrapper._id_counter += 1
 
-    def fit(self, train_data, time_limit=600):
+    def fit(self, train_data, time_limit=3600):
         """ Train the AutoGluon model and calibrate it """
         self.train_data = train_data
         try:
@@ -55,9 +54,9 @@ class AutoGluonTabularWrapper:
         # Optionally, print confirmation
         print("Calibration completed for AutoGluonTabular model.")
     ##
-    
+
     def predict_quantiles(self, test_data, quantiles=[0.05, 0.95]):
-        """ 
+        """
         Predict specified quantiles for the test data.
         Tries to use AutoGluon's quantile prediction if available, otherwise, uses a normal distribution assumption.
         """
@@ -81,11 +80,19 @@ class AutoGluonTabularWrapper:
             lower_bound = mean_predictions - 1.96 * self.residual_std
             upper_bound = mean_predictions + 1.96 * self.residual_std
             return pd.DataFrame({
-                'lower': lower_bound, 
-                'upper': upper_bound, 
+                'lower': lower_bound,
+                'upper': upper_bound,
                 'predicted': mean_predictions
             })
-   
+
+    ##
+    def predict_for_dept(self, new_data, dept):
+        """ Predicts for a specific department """
+        # Filter data for the specific department
+        dept_data = new_data[new_data['Dept'] == dept]
+        if dept_data.empty:
+            return pd.DataFrame()
+        return self.predict(dept_data)
     def predict(self, new_data):
         """ Make predictions using the trained model """
         return self.predictor.predict(new_data)
@@ -110,14 +117,14 @@ class AutoGluonTabularWrapper:
     def description(self):
         return self.model_name  # Use model_name as the description
 
-   
-    
+
+
     def get_actual_model_name(self):
         # Assuming there is a way to get the actual model name from AutoGluon
         # This could be a specific method or an attribute in the AutoGluonTabularWrapper class
         # For example, if the actual model name is stored in an attribute named 'actual_model_name'
         return getattr(self, 'actual_model_name', 'AutoGluonTabular')
-    
+
     def refit_full(self, new_data, target_column):
         # Initialize and train the predictor on the new data
         self.predictor = TabularPredictor(label=target_column).fit(new_data)
@@ -129,7 +136,7 @@ class AutoGluonTabularWrapper:
         best_model_name = max(refit_models, key=lambda k: refit_models[k])
         self.predictor.set_model_best(model=best_model_name, save_trainer=True)
 
-    
+
     def get_model_details(self):
         return {
             '.model_id': self.model_id,

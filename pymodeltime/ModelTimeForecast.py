@@ -1,14 +1,14 @@
 from prophet import Prophet
 import pandas as pd
 
+import h2o
+
 from .MLModelWrapper import MLModelWrapper
 from .H2OAutoMLWrapper import H2OAutoMLWrapper
 from .ArimaReg import ArimaReg
 from .ProphetReg import ProphetReg
 from .ModelTimeTable import ModelTimeTable
 from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
-
-
 
 class ModelTimeForecast:
     def __init__(self, model_container, actual_data, target_column, future_data=None, forecast_horizon=None,
@@ -27,72 +27,81 @@ class ModelTimeForecast:
         self.conf_method = conf_method
         self.keep_data = keep_data
         self.arrange_index = arrange_index
-        self.model_id_counter = 1 
-        
+        self.model_id_counter = 1
+
 
            ##
     ##
+   
+
+       
     def forecast(self):
         forecast_results = []
 
-        # Existing code for processing new data predictions
-        for model in self.models:
-            if self.new_data is not None:
-                forecast_results.extend(self._predict_new_data(model))
+        # Check if 'Dept' column exists for grouping
+        if 'Dept' in self.actual_data.columns:
+            grouped_data = self.actual_data.groupby('Dept')
+        else:
+            # If no 'Dept' column, treat the entire dataset as one group
+            grouped_data = [('All', self.actual_data)]
 
-            # Handling future forecasts with special treatment for Prophet
-            if isinstance(model, ProphetReg):
-                if self.future_data is not None:
-                    future_data_prophet = self.future_data.rename(columns={'date': 'ds'})
-                    forecast_results.extend(self._prophet_future_forecast(model, future_data_prophet))
-                elif self.forecast_horizon:
-                    future_data_prophet = self._generate_future_forecast_data(model).rename(columns={'date': 'ds'})
-                    forecast_results.extend(self._prophet_future_forecast(model, future_data_prophet))
-            else:
-                if self.future_data is not None:
-                    future_forecast_data = self.future_data
-                    forecast_results.extend(self._predict_future_data(model, future_forecast_data))
-                elif self.forecast_horizon:
-                    future_forecast_data = self._generate_future_forecast_data(model)
-                    forecast_results.extend(self._predict_future_data(model, future_forecast_data))
+        for dept, group in grouped_data:
+            dept_new_data = self.new_data[self.new_data['Dept'] == dept] if self.new_data is not None and 'Dept' in self.new_data.columns else self.new_data
+            dept_future_data = self.future_data[self.future_data['Dept'] == dept] if self.future_data is not None and 'Dept' in self.future_data.columns else self.future_data
 
-        # Process actual data
-        if self.actual_data is not None:
-            actual_data_results = self._process_actual_data()
-            forecast_results.extend(actual_data_results)
+            for model in self.models:
+                # Process new data predictions
+                if dept_new_data is not None:
+                    dept_forecast_results = self._predict_new_data(model, dept_new_data, dept)
+                    forecast_results.extend(dept_forecast_results)
+
+                # Handle future forecasts for ProphetReg
+                if isinstance(model, ProphetReg):
+                    if dept_future_data is not None:
+                        dept_forecast_results = self._prophet_future_forecast(model, dept_future_data)
+                        forecast_results.extend(dept_forecast_results)
+                    elif self.forecast_horizon:
+                        dept_future_data_prophet = self._generate_future_forecast_data(model)
+                        dept_forecast_results = self._prophet_future_forecast(model, dept_future_data_prophet)
+                        forecast_results.extend(dept_forecast_results)
+                else:
+                    # Handle future forecasts for other models
+                    if dept_future_data is not None:
+                        dept_forecast_results = self._predict_future_data(model, dept_future_data, dept)
+                        forecast_results.extend(dept_forecast_results)
+                    elif self.forecast_horizon:
+                        dept_future_data = self._generate_future_forecast_data(model, dept)
+                        dept_forecast_results = self._predict_future_data(model, dept_future_data, dept)
+                        forecast_results.extend(dept_forecast_results)
+
+            # Process actual data for each department or the entire dataset
+            dept_actual_data_results = self._process_actual_data(group, dept)
+            forecast_results.extend(dept_actual_data_results)
+
 
         # Combine and sort DataFrame from results, then remove duplicates
         forecast_df = pd.DataFrame(forecast_results)
+        if 'date' in forecast_df.columns:
+            forecast_df['date'] = pd.to_datetime(forecast_df['date'])
 
-        # Ensure 'date' column in forecast results is consistent
-        if 'date' in forecast_df.columns and forecast_df['date'].dtype != 'datetime.date':
-            forecast_df['date'] = pd.to_datetime(forecast_df['date']).dt.date  # Convert to datetime.date
-
-        # Sort and remove duplicates
         forecast_df.sort_values(by=['key', 'model_id', 'date'], inplace=True)
-        #print("Final Forecast DataFrame:", forecast_df.tail(30))
-        # Diagnostics: Inspect forecast_df before dropping duplicates
-#         print("Inspecting forecast_df before drop_duplicates:")
-#         print(forecast_df.dtypes)  # Print the data types of each column
-#         print(forecast_df.head())  # Print the first few rows of the DataFrame
-
-#         # Optional: Check each column for unhashable types
-#         for column in forecast_df.columns:
-#             if any(isinstance(x, pd.Series) for x in forecast_df[column]):
-#                 print(f"Column {column} contains unhashable types.")
-
         forecast_df.drop_duplicates(inplace=True)
+        # Ensure 'date' column in forecast results is consistent
+        # if 'date' in forecast_df.columns and not pd.api.types.is_datetime64_any_dtype(forecast_df['date']):
+        #      forecast_df['date'] = pd.to_datetime(forecast_df['date']).dt.date
+
 
         return forecast_df
 
 
-
-
-
-
     ##
+    
+   
     def _prophet_future_forecast(self, model, future_data):
         # Specialized method for Prophet future forecasts
+        model_desc = self._get_model_type(model)
+        model_id = self.model_id_counter
+        self.model_id_counter += 1  # Increment for the next mode
         #print("Original future_data:", future_data.head())  # Debug: Check the initial future_data
 
         # Ensure the data is in the correct format for Prophet
@@ -112,7 +121,7 @@ class ModelTimeForecast:
         for i, row in prophet_future_forecast.iterrows():
             forecast_results.append({
                 'model_id': model.id,
-                'model_desc': 'PROPHET',
+                'model_desc': model_desc,
                 'key': 'future',
                 'date': row['date'],  # Using 'ds' from prophet_future_forecast
                 'value': row['predicted'],  # Use 'yhat' for predicted value
@@ -123,16 +132,15 @@ class ModelTimeForecast:
         return forecast_results
 
     ##
-    def _predict_future_data(self, model, future_data):
+    def _predict_future_data(self, model, future_data, dept):
         #print(f"Processing future predictions for model: {type(model).__name__}")
-        model_desc = self._get_model_type(model)  # Use _get_model_type to get the actual model type
-        #model_id = getattr(model, 'id', 'N/A')  # Get the model's existing ID
+        model_desc = self._get_model_type(model)  # Get the actual model type
         model_id = self.model_id_counter
         self.model_id_counter += 1  # Increment the counter for the next model
-    
-
-   
         results = []
+
+
+
 
         if isinstance(model, AutoGluonTabularWrapper):
             if future_data is None:
@@ -162,6 +170,7 @@ class ModelTimeForecast:
                         'model_desc': model_desc,
                         'key': 'future',
                         'date': row['date'],
+                         'Dept': dept,  # Include Dept in the result
                         'value': predicted_value,
                         'conf_lo': row.get('lower', None),
                         'conf_hi': row.get('upper', None)
@@ -174,45 +183,50 @@ class ModelTimeForecast:
 
         ##
         elif isinstance(model, H2OAutoMLWrapper):
-                # Initialize H2O
-                h2o.init()
+            # Initialize H2O
+            h2o.init()
 
-                # Prepare a copy of the future_data DataFrame without the target column for prediction
-                if model.target_column in future_data.columns:
-                    future_data_for_prediction = future_data.drop(columns=[model.target_column], errors='ignore')
+            # Handle future forecasts for H2O AutoML
+            if future_data is not None:
+                # Filter data for the specific department if 'Dept' column exists
+                if 'Dept' in future_data.columns and dept is not None:
+                    future_data_for_prediction = future_data[future_data['Dept'] == dept]
                 else:
                     future_data_for_prediction = future_data
 
-                # Convert the prepared DataFrame to H2OFrame
-                h2o_future_data = h2o.H2OFrame(future_data_for_prediction)
+                # Convert to H2OFrame for prediction
+                h2o_future_data = h2o.H2OFrame(future_data_for_prediction.drop(columns=[self.target_column], errors='ignore'))
 
-                # Make predictions using the H2O AutoML model
+                # Make predictions
                 h2o_predictions = model.model.predict(h2o_future_data)
                 predictions = h2o_predictions.as_data_frame()
 
-                # Ensure the index of predictions matches future_data's index
-                predictions.index = future_data.index
+                # Add back date and department info
+                predictions['date'] = future_data_for_prediction['date'].values
+                predictions['Dept'] = dept if 'Dept' in future_data.columns else 'All'
 
-                # Add 'date' from future_data to predictions
-                predictions['date'] = future_data['date']
-
-                # Add confidence intervals
+                # Add confidence intervals (or adjust based on H2O model output)
                 error_margin = predictions['predict'] * 0.05  # Example error margin
                 predictions['conf_lo'] = predictions['predict'] - error_margin
                 predictions['conf_hi'] = predictions['predict'] + error_margin
 
-                # Construct results without 'id'
+                # Construct forecast results
                 for _, row in predictions.iterrows():
                     result = {
-                        'model_id': model_id,
-                        'model_desc': model_desc,
+                        'model_id': self.model_id_counter,
+                        'model_desc': model.model.model_id if model.model is not None else 'H2O AutoML',
                         'key': 'future',
                         'date': row['date'],
+                        'Dept': row['Dept'],
                         'value': row['predict'],
                         'conf_lo': row['conf_lo'],
                         'conf_hi': row['conf_hi']
                     }
                     results.append(result)
+
+                # Increment model_id_counter for the next model
+                self.model_id_counter += 1
+       
 
         elif isinstance(model, ArimaReg):
             # Ensure the future_data DataFrame is properly formatted for ARIMA
@@ -241,13 +255,15 @@ class ModelTimeForecast:
                     'model_desc': model_desc,
                     'key': 'future',
                     'date': row['date'],  # 'index' contains the date
+                     'Dept': dept,  # Include Dept in the result
                     'value': row['predicted'],
                     'conf_lo': row['conf_lo'],
                     'conf_hi': row['conf_hi']
                 }
                 results.append(result)
 
-    
+
+        ##
         elif isinstance(model, MLModelWrapper):
             # Ensure that feature_names are in the future_data
             if not all(name in future_data.columns for name in model.feature_names):
@@ -263,6 +279,10 @@ class ModelTimeForecast:
             # Ensure the 'date' column from future_data is included in predictions
             predictions = predictions.set_index(pd.to_datetime(future_data['date']).dt.date)
             predictions.reset_index(inplace=True)
+             # Ensure 'date' is of type Timestamp
+            # predictions['date'] = pd.to_datetime(future_data['date'])
+
+
 
             # Adding confidence intervals
             error_margin = predictions['predicted'] * 0.05  # Example error margin
@@ -270,15 +290,16 @@ class ModelTimeForecast:
             predictions['conf_hi'] = predictions['predicted'] + error_margin
 
             # Get the model name from the MLModelWrapper instance
-            model_desc = getattr(model, 'model_name', 'ML Model Description Not Available')
+            #model_desc = getattr(model, 'model_name', 'ML Model Description Not Available')
 
             # Construct the result list
             for _, row in predictions.iterrows():
                 result = {
                     'model_id': model_id,
-                    'model_desc': model_desc,
+                    'model_desc': getattr(model, 'model_name', 'ML Model'),
                     'key': 'future',
                     'date': row['date'],
+                     'Dept': dept,  # Include Dept in the result
                     'value': row['predicted'],
                     'conf_lo': row['conf_lo'],
                     'conf_hi': row['conf_hi']
@@ -288,32 +309,37 @@ class ModelTimeForecast:
         # ... [handling for other models, if needed] ...
 
         return results
-        
-    
-    
-    def _process_actual_data(self):
+
+
+
+    #
+    def _filter_dept_data(self, data, dept):
+        """Helper method to filter data by department if 'Dept' column exists."""
+        return data[data['Dept'] == dept] if data is not None and 'Dept' in data.columns else data
+
+    def _process_actual_data(self, group, dept):
         """
         Process actual data for forecasting, filtering out any future dates.
+        This method now takes additional arguments 'group' and 'dept'.
         """
-        # Ensure target_column is set
-        if not hasattr(self, 'target_column') or self.target_column not in self.actual_data.columns:
+        if not hasattr(self, 'target_column') or self.target_column not in group.columns:
             raise ValueError("Target column not set or not found in actual data.")
 
-        # Filter out rows where the target value is NaN (or apply other criteria)
-        filtered_actual_data = self.actual_data.dropna(subset=[self.target_column])
+        filtered_actual_data = group.dropna(subset=[self.target_column])
 
-        # Find the latest date in the filtered data
         latest_actual_date = filtered_actual_data['date'].max()
-
-        # Additional filtering if needed
         filtered_actual_data = filtered_actual_data[filtered_actual_data['date'] <= latest_actual_date]
 
-        #print("Filtered actual data (tail):", filtered_actual_data.tail())
+        # Include 'Dept' in results if it exists in the group DataFrame
+        include_dept = 'Dept' in group.columns
 
-        # Ensure a list is returned even if filtered_actual_data is empty
-        return [{'model_id': 'Actual', 'model_desc': 'ACTUAL', 'key': 'actual',
-                'date': row['date'], 'value': row[self.target_column], 'conf_lo': None, 'conf_hi': None}
-                for _, row in filtered_actual_data.iterrows()] or []
+        return [{
+            'model_id': 'Actual', 'model_desc': 'ACTUAL', 'key': 'actual',
+            'date': row['date'], 'value': row[self.target_column],
+            'conf_lo': None, 'conf_hi': None,
+            'Dept': row['Dept'] if include_dept else dept
+        } for _, row in filtered_actual_data.iterrows()] or []
+
 
 
 
@@ -365,54 +391,52 @@ class ModelTimeForecast:
 
 
     ##
-    def _predict_new_data(self, model):
-        print(f"Processing predictions for model: {type(model).__name__}")
-        forecast_data = self._generate_forecast_data(model, self.new_data)
-        model_desc = getattr(model, 'description', 'No description available')
+    def _predict_new_data(self, model, new_data, dept):
+        print(f"Processing predictions for model: {type(model).__name__} and department: {dept}")
+        forecast_data = self._generate_forecast_data(model, new_data)
+        # model_desc = getattr(model, 'description', 'No description available')
+        model_desc = self._get_model_type(model)
 
-         # Generate a unique model_id for each model type
         model_id = self.model_id_counter
         self.model_id_counter += 1  # Increment the counter for the next model
-        # Initialize an empty list for results
         results = []
+
 
         ##
         if isinstance(model, AutoGluonTabularWrapper):
-            X_new = self.new_data.drop(columns=[self.target_column], errors='ignore')
-            try:
-                predictions_raw = model.predict(X_new)
+            # Filter new data for the specific department if Dept column exists and department is specified
+            if 'Dept' in new_data.columns and dept is not None:
+                X_new = new_data[new_data['Dept'] == dept].drop(columns=[self.target_column], errors='ignore')
+            else:
+                X_new = new_data.drop(columns=[self.target_column], errors='ignore')
 
-                quantiles_df = model.predict_quantiles(X_new) if hasattr(model, 'predict_quantiles') else pd.DataFrame({'lower': [None] * len(predictions_raw), 'upper': [None] * len(predictions_raw)})
+            if not X_new.empty:
+                try:
+                    predictions_raw = model.predict(X_new)
+                    quantiles_df = model.predict_quantiles(X_new) if hasattr(model, 'predict_quantiles') else pd.DataFrame({'lower': [None] * len(predictions_raw), 'upper': [None] * len(predictions_raw)})
+                    predictions_df = predictions_raw.to_frame(name='predicted')
+                    predictions_df['date'] = X_new['date'].values
+                    predictions_df = pd.concat([predictions_df.reset_index(drop=True), quantiles_df.reset_index(drop=True)], axis=1)
 
-                predictions_df = predictions_raw.to_frame(name='predicted')
-                predictions_df['date'] = self.new_data['date'].values
-                predictions_df = pd.concat([predictions_df.reset_index(drop=True), quantiles_df.reset_index(drop=True)], axis=1)
+                    for _, row in predictions_df.iterrows():
+                        predicted_value = row['predicted'] if isinstance(row['predicted'], (int, float)) else row['predicted'].iloc[0]
+                        result = {
+                            'model_id': model_id, 'model_desc': model_desc, 'key': 'prediction',
+                            'date': row['date'], 'Dept': dept if 'Dept' in new_data.columns else 'All',
+                            'value': predicted_value, 'conf_lo': row.get('lower', None), 'conf_hi': row.get('upper', None)
+                        }
+                        results.append(result)
 
-                model_type = self._get_model_type(model)  # Use _get_model_type to get the actual model name
-
-                for _, row in predictions_df.iterrows():
-                    predicted_value = row['predicted'] if isinstance(row['predicted'], (int, float)) else row['predicted'].iloc[0]
-                    result = {
-                        'model_id': model_id,
-                        'model_desc': model_type,  # Use model_type for the model description
-                        'key': 'prediction',
-                        'date': row['date'],
-                        'value': predicted_value,
-                        'conf_lo': row.get('lower', None),
-                        'conf_hi': row.get('upper', None)
-                    }
-                    results.append(result)
-
-            except Exception as e:
-                print(f"Error in predicting with AutoGluonTabularWrapper: {e}")
-                return []
-
-        
+                except Exception as e:
+                    print(f"Error in predicting with AutoGluonTabularWrapper: {e}")
 
 
-       
 
-        
+
+
+
+
+
         ##
         elif isinstance(model, ArimaReg):
             # Handling ARIMA model
@@ -433,14 +457,15 @@ class ModelTimeForecast:
                     'model_desc': model_desc,
                     'key': 'prediction',
                     'date': row['date'],
+                    'Dept': dept,  # Include Dept in the result
                     'value': row['predicted'],
                     'conf_lo': row['conf_lo'],
                     'conf_hi': row['conf_hi']
                 })
-                
+
         ##
         elif isinstance(model, ProphetReg):
-            
+
             # Handling ProphetReg model
             forecast_data_prophet = forecast_data.rename(columns={'date': 'ds'})
             predictions = model.predict(forecast_data_prophet)
@@ -453,24 +478,58 @@ class ModelTimeForecast:
                     'model_desc': model_desc,
                     'key': 'prediction',
                     'date': row['date'],
+                    'Dept': dept,  # Include Dept in the result
                     'value': row['predicted'],
                     'conf_lo': row['conf_lo'],
                     'conf_hi': row['conf_hi']
                 })
+        ##
         elif isinstance(model, H2OAutoMLWrapper):
-                # Handling H2OAutoMLWrapper model
-                h2o.init()
+            # Initialize H2O
+            h2o.init()
+
+            # Handle predictions for grouped data (by Dept) if 'Dept' column exists
+            if 'Dept' in forecast_data.columns:
+                unique_depts = forecast_data['Dept'].unique()
+                for dept in unique_depts:
+                    # Filter data for the current department
+                    dept_forecast_data = forecast_data[forecast_data['Dept'] == dept]
+
+                    # Predict for the specific department
+                    h2o_predictions = model.model.predict(h2o.H2OFrame(dept_forecast_data))
+                    predictions = h2o_predictions.as_data_frame()
+                    predictions = predictions[['predict']].rename(columns={'predict': 'predicted'})
+                    predictions['date'] = dept_forecast_data['date'].values  # Align dates
+
+                    # Add confidence intervals
+                    error_margin = predictions['predicted'] * 0.05  # Example error margin
+                    predictions['conf_lo'] = predictions['predicted'] - error_margin
+                    predictions['conf_hi'] = predictions['predicted'] + error_margin
+
+                    # Process predictions to create results
+                    for _, row in predictions.iterrows():
+                        results.append({
+                            'model_id': model_id,
+                            'model_desc': model_desc,
+                            'key': 'prediction',
+                            'date': row['date'],
+                            'Dept': dept,  # Specify the department
+                            'value': row['predicted'],
+                            'conf_lo': row['conf_lo'],
+                            'conf_hi': row['conf_hi']
+                        })
+
+            else:
+                # Handle predictions for non-grouped data
                 h2o_predictions = model.model.predict(h2o.H2OFrame(forecast_data))
                 predictions = h2o_predictions.as_data_frame()
                 predictions = predictions[['predict']].rename(columns={'predict': 'predicted'})
-                predictions['date'] = forecast_data['date'].values  # Ensure date is aligned
+                predictions['date'] = forecast_data['date'].values  # Align dates
 
-                # Using a similar approach for confidence interval estimation
-                error_margin = predictions['predicted'] * 0.05  # 5% error margin as an example
+                # Add confidence intervals
+                error_margin = predictions['predicted'] * 0.05
                 predictions['conf_lo'] = predictions['predicted'] - error_margin
                 predictions['conf_hi'] = predictions['predicted'] + error_margin
-
-                model_id = getattr(model, 'id', 'H2O_AutoML')  # Use a default id if not available
 
                 # Process predictions to create results
                 for _, row in predictions.iterrows():
@@ -479,46 +538,73 @@ class ModelTimeForecast:
                         'model_desc': model_desc,
                         'key': 'prediction',
                         'date': row['date'],
+                        'Dept': 'All',  # Use 'All' for non-grouped data
                         'value': row['predicted'],
                         'conf_lo': row['conf_lo'],
                         'conf_hi': row['conf_hi']
                     })
+
+
+
+
+
+        ##
         elif isinstance(model, MLModelWrapper):
-                # Handling MLModelWrapper models
-                X = forecast_data[model.feature_names]
-                predictions = model.predict(X)
+            print(f"Processing predictions for model: {type(model).__name__} and department: {dept}")
 
-                # Convert predictions to DataFrame if necessary
-                if not isinstance(predictions, pd.DataFrame):
-                    predictions = pd.DataFrame(predictions, columns=['predicted'])
+            # Check if forecast_data is empty
+            if forecast_data.empty:
+                print(f"No data available for predictions for department: {dept}")
+                return []
 
-                # Aligning dates
-                predictions['date'] = forecast_data['date'].values
+            # Check if all feature names are present
+            missing_features = [feature for feature in model.feature_names if feature not in forecast_data.columns]
+            if missing_features:
+                print(f"Missing features in forecast_data: {missing_features}")
+                return []
 
-                # Calculating confidence intervals
-                error_margin = predictions['predicted'] * 0.05  # 5% error margin
-                predictions['conf_lo'] = predictions['predicted'] - error_margin
-                predictions['conf_hi'] = predictions['predicted'] + error_margin
+            X = forecast_data[model.feature_names]
+            predictions = model.predict(X)
 
-                # Process predictions to create results
-                for _, row in predictions.iterrows():
-                    results.append({
-                        'model_id': model_id,
-                        'model_desc': getattr(model, 'model_name', 'ML Model'),
-                        'key': 'prediction',
-                        'date': row['date'],
-                        'value': row['predicted'],
-                        'conf_lo': row['conf_lo'],
-                        'conf_hi': row['conf_hi']
-                    })
+            # Check if predictions are empty
+            if predictions.size == 0:
+                print(f"No predictions returned for model {type(model).__name__} and department {dept}")
+                return []
+
+            # Convert predictions to DataFrame if necessary
+            if not isinstance(predictions, pd.DataFrame):
+                predictions = pd.DataFrame(predictions, columns=['predicted'])
+
+            # Standardizing date format
+            predictions['date'] = pd.to_datetime(forecast_data['date'].values)
+
+            # Calculating confidence intervals
+            error_margin = predictions['predicted'] * 0.05  # 5% error margin
+            predictions['conf_lo'] = predictions['predicted'] - error_margin
+            predictions['conf_hi'] = predictions['predicted'] + error_margin
+
+            # Process predictions to create results
+            for _, row in predictions.iterrows():
+                results.append({
+                    'model_id': model_id,
+                    'model_desc': getattr(model, 'model_name', 'ML Model'),
+                    'key': 'prediction',
+                    'date': row['date'],
+                    'Dept': dept,  # Include Dept in the result
+                    'value': row['predicted'],
+                    'conf_lo': row['conf_lo'],
+                    'conf_hi': row['conf_hi']
+                })
+
 
         # Add handling for other model types if necessary...
 
         return results
-    
-  
 
-   
+
+
+
+
     ##
     def _create_future_dataframe(self, periods):
         """
@@ -590,14 +676,14 @@ class ModelTimeForecast:
         ##
     ##
     def _get_model_type(self, model):
-        
+
         """ Utility function to get the type of the model. """
         if isinstance(model, AutoGluonTabularWrapper):
             return model.get_best_model() if hasattr(model, 'get_best_model') else 'AutoGluonTabular'
         elif isinstance(model, ProphetReg):
             return 'Prophet'
         elif isinstance(model, ArimaReg):
-            return 'ARIMA'
+            return model.description
         elif isinstance(model, H2OAutoMLWrapper):
             return model.model.model_id if model.model is not None else 'H2O AutoML'
         elif isinstance(model, MLModelWrapper):

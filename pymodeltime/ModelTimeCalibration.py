@@ -15,6 +15,7 @@ from .ProphetReg import ProphetReg
 from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
 
 
+
 class ModelTimeCalibration:
     def __init__(self, model_time_table, new_data, target_column):
         self.model_time_table = model_time_table
@@ -70,14 +71,14 @@ class ModelTimeCalibration:
             print("Calibration data NOT set for AutoGluonTabular model.")
 
 
-                
-              
-   
-    
+
+
+
+
     def update_model_calibration_data(self, model_id, calibration_data):
         """
         Update the calibration data of a specific model in the model time table.
-        
+
         Parameters:
         model_id: The ID of the model to update.
         calibration_data: The new calibration data for the model.
@@ -95,7 +96,7 @@ class ModelTimeCalibration:
         regressor_columns = model.regressors if model.regressors else []
         prophet_exog_data = prophet_data[['date', 'ds'] + regressor_columns].dropna()
         predictions = model.predict(prophet_exog_data)
-        predictions['predicted'] = predictions['predicted'] 
+        predictions['predicted'] = predictions['predicted']
         merged_data = self._merge_and_calculate_residuals(predictions, 'predicted')
         model.calibration_data = merged_data
 
@@ -135,12 +136,30 @@ class ModelTimeCalibration:
         merged_data['residuals'] = merged_data[self.target_column] - merged_data[pred_column]
         return merged_data[['date', self.target_column, pred_column, 'residuals']]
 
+    ##
+    def _get_model_type(self, model):
+        """ Utility function to get the type of the model. """
+        if isinstance(model, AutoGluonTabularWrapper):
+            return model.get_best_model() if hasattr(model, 'get_best_model') else 'AutoGluonTabular'
+        elif isinstance(model, ProphetReg):
+            return 'Prophet'
+        elif isinstance(model, ArimaReg):
+            return 'ARIMA'
+        elif isinstance(model, H2OAutoMLWrapper):
+            return model.model.model_id if model.model is not None else 'H2O AutoML'
+        elif isinstance(model, MLModelWrapper):
+            return model.model.__class__.__name__  # Get the class name of the underlying model
+        else:
+            return 'Unknown Model'
+
     def get_calibration_results(self):
         calibration_results = []
         for model in self.model_time_table.models:
             # Retrieve the actual model name for AutoGluonTabular models
-            if isinstance(model, AutoGluonTabularWrapper) and hasattr(model, 'actual_model_name'):
-                model_desc = model.actual_model_name
+            if isinstance(model, H2OAutoMLWrapper):
+                model_desc = self._get_model_type(model)
+            elif isinstance(model, AutoGluonTabularWrapper) and hasattr(model, 'actual_model_name'):
+                model_desc = self._get_model_type(model)
             elif isinstance(model, MLModelWrapper):
                 model_desc = model.description
             else:
@@ -162,6 +181,8 @@ class ModelTimeCalibration:
     def display_calibration_results(self):
         model_ids = [model.id for model in self.model_time_table.models]
         interact(self._view_calibration, model_id=model_ids)
+
+    ##
 
     def _view_calibration(self, model_id):
         model = self.model_time_table.get_model_by_id(model_id)

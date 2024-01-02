@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 
+import h2o
 
 class ModelTimeRefit:
     def __init__(self, modeltime_table, verbose=False, parallel=False, max_workers=None):
@@ -30,7 +31,7 @@ class ModelTimeRefit:
             if model.__class__.__name__ == 'AutoGluonTabularWrapper':
                 # Handle refitting for AutoGluonTabularWrapper
                 self._refit_auto_gluon_tabular(model, data, target_column)
-            
+
 
             elif isinstance(model, ArimaReg):
                 # Fit and refit for ArimaReg
@@ -62,7 +63,7 @@ class ModelTimeRefit:
                 print(f"Error refitting model {model}: {e}")
             return None
 
-                
+
    ##
     def _refit_h2o_automl(self, h2o_model, data, target_column, max_models=5, seed=1, max_runtime_secs=3600):
         h2o.init()
@@ -94,23 +95,23 @@ class ModelTimeRefit:
 
     ##
     def _get_model_type(self, model):
-        
+
         """ Utility function to get the type of the model. """
         if isinstance(model, AutoGluonTabularWrapper):
             return model.get_best_model() if hasattr(model, 'get_best_model') else 'AutoGluonTabular'
         elif isinstance(model, ProphetReg):
             return 'Prophet'
         elif isinstance(model, ArimaReg):
-            return 'ARIMA'
+            return model.description
         elif isinstance(model, H2OAutoMLWrapper):
             return model.model.model_id if model.model is not None else 'H2O AutoML'
         elif isinstance(model, MLModelWrapper):
             return model.model.__class__.__name__  # Get the class name of the underlying model
         else:
             return 'Unknown Model'
-        
+  
     ##
-    
+
     def forecast(self, actual_data, target_column):
         actual_data = self._filter_actual_data(actual_data, target_column)
         self.forecast_results = {}
@@ -174,9 +175,9 @@ class ModelTimeRefit:
                 self.forecast_results[model] = None
 
         return self.forecast_results
-   
-      
-    
+
+
+
 
     ##
     def _filter_actual_data(self, data, target_column):
@@ -205,3 +206,7 @@ class ModelTimeRefit:
                 '.calibration_data': calibration_data_status
             })
         return pd.DataFrame(model_summary)
+
+
+
+

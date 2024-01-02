@@ -39,7 +39,7 @@ def plot_modeltime_forecast(df, date_col='date', value_col='value',
                                          showlegend=False))
 
         # Update layout for interactive plot with centered title
-        fig.update_layout(title=title, title_x=0.5,  # Center the title
+        fig.update_layout(title=title, title_x=0.3,  # Center the title
                           xaxis_title=x_lab, yaxis_title=y_lab,
                           legend=dict(orientation="v", x=1.05, y=1, xanchor="left", yanchor="top"))
         return fig
@@ -75,5 +75,6 @@ def plot_modeltime_forecast(df, date_col='date', value_col='value',
         plt.ylabel(y_lab)
         plt.legend(loc='upper left', bbox_to_anchor=(1, 1))  # Move legend to the right side of the plot
         plt.show()
+
 
 
