@@ -102,14 +102,14 @@ class ModelTimeRefit:
         elif isinstance(model, ProphetReg):
             return 'Prophet'
         elif isinstance(model, ArimaReg):
-            return 'ARIMA'
+            return model.description
         elif isinstance(model, H2OAutoMLWrapper):
             return model.model.model_id if model.model is not None else 'H2O AutoML'
         elif isinstance(model, MLModelWrapper):
             return model.model.__class__.__name__  # Get the class name of the underlying model
         else:
             return 'Unknown Model'
-
+  
     ##
 
     def forecast(self, actual_data, target_column):
@@ -206,6 +206,7 @@ class ModelTimeRefit:
                 '.calibration_data': calibration_data_status
             })
         return pd.DataFrame(model_summary)
+
 
 
 
