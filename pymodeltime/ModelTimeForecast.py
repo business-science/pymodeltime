@@ -10,8 +10,6 @@ from .ProphetReg import ProphetReg
 from .ModelTimeTable import ModelTimeTable
 from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
 
-
-
 class ModelTimeForecast:
     def __init__(self, model_container, actual_data, target_column, future_data=None, forecast_horizon=None,
                  new_data=None, conf_interval=0.95, conf_by_id=False, actual_data_cutoff=None,
@@ -185,46 +183,50 @@ class ModelTimeForecast:
 
         ##
         elif isinstance(model, H2OAutoMLWrapper):
-                # Initialize H2O
-                h2o.init()
+            # Initialize H2O
+            h2o.init()
 
-                # Prepare a copy of the future_data DataFrame without the target column for prediction
-                if model.target_column in future_data.columns:
-                    future_data_for_prediction = future_data.drop(columns=[model.target_column], errors='ignore')
+            # Handle future forecasts for H2O AutoML
+            if future_data is not None:
+                # Filter data for the specific department if 'Dept' column exists
+                if 'Dept' in future_data.columns and dept is not None:
+                    future_data_for_prediction = future_data[future_data['Dept'] == dept]
                 else:
                     future_data_for_prediction = future_data
 
-                # Convert the prepared DataFrame to H2OFrame
-                h2o_future_data = h2o.H2OFrame(future_data_for_prediction)
+                # Convert to H2OFrame for prediction
+                h2o_future_data = h2o.H2OFrame(future_data_for_prediction.drop(columns=[self.target_column], errors='ignore'))
 
-                # Make predictions using the H2O AutoML model
+                # Make predictions
                 h2o_predictions = model.model.predict(h2o_future_data)
                 predictions = h2o_predictions.as_data_frame()
 
-                # Ensure the index of predictions matches future_data's index
-                predictions.index = future_data.index
+                # Add back date and department info
+                predictions['date'] = future_data_for_prediction['date'].values
+                predictions['Dept'] = dept if 'Dept' in future_data.columns else 'All'
 
-                # Add 'date' from future_data to predictions
-                predictions['date'] = future_data['date']
-
-                # Add confidence intervals
+                # Add confidence intervals (or adjust based on H2O model output)
                 error_margin = predictions['predict'] * 0.05  # Example error margin
                 predictions['conf_lo'] = predictions['predict'] - error_margin
                 predictions['conf_hi'] = predictions['predict'] + error_margin
 
-                # Construct results without 'id'
+                # Construct forecast results
                 for _, row in predictions.iterrows():
                     result = {
-                        'model_id': model_id,
-                        'model_desc': model_desc,
+                        'model_id': self.model_id_counter,
+                        'model_desc': model.model.model_id if model.model is not None else 'H2O AutoML',
                         'key': 'future',
                         'date': row['date'],
-                         'Dept': dept,  # Include Dept in the result
+                        'Dept': row['Dept'],
                         'value': row['predict'],
                         'conf_lo': row['conf_lo'],
                         'conf_hi': row['conf_hi']
                     }
                     results.append(result)
+
+                # Increment model_id_counter for the next model
+                self.model_id_counter += 1
+       
 
         elif isinstance(model, ArimaReg):
             # Ensure the future_data DataFrame is properly formatted for ARIMA
