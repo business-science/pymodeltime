@@ -1,4 +1,3 @@
-
 class MLModelWrapper:
     _id_counter = 1  # Class-level counter for generating unique model IDs
 
@@ -45,26 +44,70 @@ class MLModelWrapper:
 
     ##
     def forecast_with_date_id(self, data):
+        # Convert 'date' column to datetime.date format if it's not already
+        if not pd.api.types.is_datetime64_any_dtype(data['date']):
+            data['date'] = pd.to_datetime(data['date']).dt.date
+
+        # Identify potential grouping column
+        group_column = self._find_group_column(data)
+
+        if group_column:
+            return self._forecast_grouped_data(data, group_column)
+        else:
+            return self._forecast_individual(data)
+
+
+    def _find_group_column(self, data):
+        # Heuristic to find a potential grouping column
+        # This could be refined based on your specific data and requirements
+        for col in data.columns:
+            if data[col].dtype == 'object' or col == 'Dept':
+                return col
+        return None
+
+
+    ##
+    def _forecast_grouped_data(self, data, group_column):
+        grouped = data.groupby(group_column)
+        all_forecasts = []
+
+        for _, group in grouped:
+            # Debugging: Check 'date' type in each group
+            print(f"Group '{group_column}' 'date' type:", group['date'].dtype)
+
+            forecast_df = self._forecast_individual(group)
+            all_forecasts.append(forecast_df)
+
+        return pd.concat(all_forecasts, ignore_index=True)
+
+
+
+    ##
+    def _forecast_individual(self, data):
         # Check if 'date' and 'id' columns exist
         if 'date' not in data.columns or 'id' not in data.columns:
             raise ValueError("Data must contain 'date' and 'id' columns")
+
+        # Standardize 'date' to Timestamp format
+        data['date'] = pd.to_datetime(data['date'])
 
         # Extract 'date' and 'id' before prediction
         date_series = data['date']
         id_series = data['id']
 
-        # Prepare data for prediction (excluding 'date' and 'id')
+        # Prepare data for prediction
         X = data[self.feature_names]
 
         # Generate predictions
         predictions = self.predict(X)
 
-        # Combine 'date', 'id', and 'predictions' into a DataFrame
-        forecast_df = pd.DataFrame({
+        return pd.DataFrame({
             'prediction': predictions,
             'date': date_series,
             'id': id_series
         })
 
-        return forecast_df
+
+
+
 
