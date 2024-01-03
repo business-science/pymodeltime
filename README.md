@@ -1,6 +1,7 @@
 ### pymodeltime
-[Univariate_regression-Open in Colab](https://colab.research.google.com/drive/1CK6Zu_4lBYTkihyEQ1U_4wiViw2qjFBr?usp=sharing)
-[Demand Forecasting-Open in Colab](https://colab.research.google.com/drive/1OPxgPBLiIQpIE1T1ZnHaIOI005GOKIgb?usp=sharing)
+
+- [Univariate Regression - Open in Colab](https://colab.research.google.com/drive/1CK6Zu_4lBYTkihyEQ1U_4wiViw2qjFBr?usp=sharing)
+- [Demand Forecasting - Open in Colab](https://colab.research.google.com/drive/1OPxgPBLiIQpIE1T1ZnHaIOI005GOKIgb?usp=sharing)
 
 
 ### Installation
