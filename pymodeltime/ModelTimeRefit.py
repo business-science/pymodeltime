@@ -26,12 +26,12 @@ class ModelTimeRefit:
             if self.verbose:
                 print(f"Error refitting AutoGluonTabular model {model}: {e}")
 
+    ##
     def _refit_model(self, model, data, target_column):
         try:
-            if model.__class__.__name__ == 'AutoGluonTabularWrapper':
+            if isinstance(model, AutoGluonTabularWrapper):
                 # Handle refitting for AutoGluonTabularWrapper
                 self._refit_auto_gluon_tabular(model, data, target_column)
-
 
             elif isinstance(model, ArimaReg):
                 # Fit and refit for ArimaReg
@@ -48,8 +48,9 @@ class ModelTimeRefit:
                 model.fit(X, y)
 
             elif isinstance(model, H2OAutoMLWrapper):
-                # Fit and refit for H2OAutoMLWrapper
-                self._refit_h2o_automl(model, data, target_column)
+                # Fit and refit for H2OAutoMLWrapper, and update with the new leader model
+                new_leader = self._refit_h2o_automl(model, data, target_column)
+                model.model = new_leader  # Update the model in the wrapper
 
             else:
                 raise ValueError(f"Unsupported model type: {type(model)}")
@@ -62,10 +63,14 @@ class ModelTimeRefit:
             if self.verbose:
                 print(f"Error refitting model {model}: {e}")
             return None
-
-
+   
    ##
-    def _refit_h2o_automl(self, h2o_model, data, target_column, max_models=5, seed=1, max_runtime_secs=3600):
+ 
+
+    
+    
+    ##
+    def _refit_h2o_automl(self, h2o_model, data, target_column, max_models=2, seed=1, max_runtime_secs=3600):
         h2o.init()
         h2o_data = h2o.H2OFrame(data)
         predictors = [col for col in h2o_data.columns if col != target_column]
@@ -73,7 +78,14 @@ class ModelTimeRefit:
         automl = H2OAutoML(max_models=max_models, seed=seed, max_runtime_secs=max_runtime_secs)
         automl.train(x=predictors, y=target_column, training_frame=h2o_data)
 
-        h2o_model.model = automl.leader
+        # Print the leaderboard immediately after training
+        lb = automl.leaderboard
+        print("H2O AutoML Leaderboard after refitting:")
+        lb.head(rows=lb.nrows).as_data_frame().to_csv("h2o_automl_leaderboard.csv")
+        lb.head(rows=lb.nrows)  # Display all rows of the leaderboard
+
+        return automl.leader
+
 
     def forecast_h2o_automl(self, h2o_model, actual_data):
         h2o_data = h2o.H2OFrame(actual_data)
@@ -102,14 +114,14 @@ class ModelTimeRefit:
         elif isinstance(model, ProphetReg):
             return 'Prophet'
         elif isinstance(model, ArimaReg):
-            return model.description
+            return 'ARIMA'
         elif isinstance(model, H2OAutoMLWrapper):
             return model.model.model_id if model.model is not None else 'H2O AutoML'
         elif isinstance(model, MLModelWrapper):
             return model.model.__class__.__name__  # Get the class name of the underlying model
         else:
             return 'Unknown Model'
-  
+
     ##
 
     def forecast(self, actual_data, target_column):
@@ -206,7 +218,3 @@ class ModelTimeRefit:
                 '.calibration_data': calibration_data_status
             })
         return pd.DataFrame(model_summary)
-
-
-
-
