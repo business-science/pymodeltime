@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
 import h2o
-
+from h2o.automl import H2OAutoML
 
 class ModelTimeRefit:
     def __init__(self, modeltime_table, verbose=False, parallel=False, max_workers=None):
