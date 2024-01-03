@@ -10,7 +10,7 @@ from .pymodeltime.ModelTimeRefit import*
 from .pymodeltime.plot_modeltime_forecast import*
 from .pymodeltime.MLModelWrapper import*
 from .pymodeltime.H2OAutoMLWrapper import*
-
+from .pymodeltime.plot_modeltime_forecast_2 import*
 
 # __all__ = [
 #     "ArimaReg",
