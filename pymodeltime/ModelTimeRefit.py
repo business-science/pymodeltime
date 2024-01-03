@@ -8,8 +8,8 @@ from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pandas as pd
-
 import h2o
+
 
 class ModelTimeRefit:
     def __init__(self, modeltime_table, verbose=False, parallel=False, max_workers=None):
@@ -218,3 +218,4 @@ class ModelTimeRefit:
                 '.calibration_data': calibration_data_status
             })
         return pd.DataFrame(model_summary)
+
