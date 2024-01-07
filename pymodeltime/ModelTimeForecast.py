@@ -658,20 +658,44 @@ class ModelTimeForecast:
 
 
    ##
-    def _generate_future_forecast_data(self, model):
-        """
-        Generate future forecast data for the model.
-        """
-        if not self.forecast_horizon:
-            return None
+    def _generate_future_forecast_data(self, model, dept=None):
+            """
+            Generate future forecast data for the model.
+            Adjusted to handle both ungrouped and grouped data.
+            """
+            if not self.forecast_horizon:
+                return None
 
-        periods = self._parse_forecast_horizon(self.forecast_horizon)
-        future_data = self._create_future_dataframe(periods)
+            periods = self._parse_forecast_horizon(self.forecast_horizon)
+            future_data = self._create_future_dataframe(periods)
 
-        # For Prophet model, ensure the 'ds' column is present
-        if isinstance(model, ProphetReg):
-            future_data = future_data.rename(columns={'date': 'ds'})
-        return future_data
+            # Adjustments for Prophet and ARIMA models
+            if isinstance(model, ProphetReg):
+                future_data = future_data.rename(columns={'date': 'ds'})
+            elif isinstance(model, ArimaReg):
+                # Additional handling for ARIMA if needed
+                pass
+
+            # Include 'Dept' column if the data is grouped
+            if dept is not None:
+                future_data['Dept'] = dept
+
+            return future_data
+
+    # def _generate_future_forecast_data(self, model):
+    #     """
+    #     Generate future forecast data for the model.
+    #     """
+    #     if not self.forecast_horizon:
+    #         return None
+
+    #     periods = self._parse_forecast_horizon(self.forecast_horizon)
+    #     future_data = self._create_future_dataframe(periods)
+
+    #     # For Prophet model, ensure the 'ds' column is present
+    #     if isinstance(model, ProphetReg):
+    #         future_data = future_data.rename(columns={'date': 'ds'})
+    #     return future_data
 
         ##
     ##
