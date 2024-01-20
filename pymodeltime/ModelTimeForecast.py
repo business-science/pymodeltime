@@ -1,6 +1,5 @@
 from prophet import Prophet
 import pandas as pd
-
 import h2o
 
 from .MLModelWrapper import MLModelWrapper
@@ -9,6 +8,9 @@ from .ArimaReg import ArimaReg
 from .ProphetReg import ProphetReg
 from .ModelTimeTable import ModelTimeTable
 from .AutoGluonTabularWrapper import AutoGluonTabularWrapper
+from .MLForecastWrapper import MLForecastWrapper
+
+
 
 class ModelTimeForecast:
     def __init__(self, model_container, actual_data, target_column, future_data=None, forecast_horizon=None,
@@ -30,11 +32,6 @@ class ModelTimeForecast:
         self.model_id_counter = 1
 
 
-           ##
-    ##
-   
-
-       
     def forecast(self):
         forecast_results = []
 
@@ -94,9 +91,7 @@ class ModelTimeForecast:
         return forecast_df
 
 
-    ##
-    
-   
+
     def _prophet_future_forecast(self, model, future_data):
         # Specialized method for Prophet future forecasts
         model_desc = self._get_model_type(model)
@@ -226,7 +221,7 @@ class ModelTimeForecast:
 
                 # Increment model_id_counter for the next model
                 self.model_id_counter += 1
-       
+
 
         elif isinstance(model, ArimaReg):
             # Ensure the future_data DataFrame is properly formatted for ARIMA
@@ -306,8 +301,7 @@ class ModelTimeForecast:
                 }
                 results.append(result)
 
-        # ... [handling for other models, if needed] ...
-
+      
         return results
 
 
@@ -372,14 +366,14 @@ class ModelTimeForecast:
         Generate forecast data for the model.
         """
         if isinstance(model, ProphetReg):
-            print("Original columns before processing for Prophet:", data.columns)
+            #print("Original columns before processing for Prophet:", data.columns)
             if 'date' in data.columns:
                 forecast_data = data.rename(columns={'date': 'ds'})
             elif 'ds' in data.columns:
                 forecast_data = data
             else:
                 raise KeyError("The DataFrame must contain a 'date' or 'ds' column for Prophet models.")
-            print("Columns after processing for Prophet:", forecast_data.columns)
+            #print("Columns after processing for Prophet:", forecast_data.columns)
 
             # Additional check for 'ds' column
             if 'ds' not in forecast_data.columns:
@@ -392,7 +386,7 @@ class ModelTimeForecast:
 
     ##
     def _predict_new_data(self, model, new_data, dept):
-        print(f"Processing predictions for model: {type(model).__name__} and department: {dept}")
+        #print(f"Processing predictions for model: {type(model).__name__} and department: {dept}")
         forecast_data = self._generate_forecast_data(model, new_data)
         # model_desc = getattr(model, 'description', 'No description available')
         model_desc = self._get_model_type(model)
@@ -430,14 +424,47 @@ class ModelTimeForecast:
                 except Exception as e:
                     print(f"Error in predicting with AutoGluonTabularWrapper: {e}")
 
-
-
-
-
-
-
-
         ##
+        elif isinstance(model, MLForecastWrapper):
+            # Using model's own id for MLForecastWrapper sub-models
+            model_id = getattr(model, 'id', None) or self.model_id_counter
+            model_desc = self._get_model_type(model)
+
+            # Ensure 'ds' column is present and properly formatted
+            if 'date' in new_data.columns:
+                new_data = new_data.rename(columns={'date': 'ds'})
+            new_data['ds'] = pd.to_datetime(new_data['ds']).dt.date
+
+            # Generate predictions
+            predictions = model.predict(len(new_data), levels=[0.95])
+
+            # Iterate over each sub-model in MLForecastWrapper and append results
+
+            results = []
+            for sub_model_name in model.models.keys():
+                sub_model_predictions = predictions[[sub_model_name, f'{sub_model_name}-lo-0.95', f'{sub_model_name}-hi-0.95']]
+
+                # Assign a unique model_id for each sub-model
+                sub_model_id = f"{getattr(model, 'id', None) or self.model_id_counter}_{sub_model_name}"
+                self.model_id_counter += 1  # Increment counter for next sub-model
+
+                for idx, row in sub_model_predictions.iterrows():
+                    result = {
+                        'model_id': sub_model_id,
+                        'model_desc': f"{sub_model_name}",
+                        'key': 'prediction',
+                        'date': new_data.iloc[idx]['ds'],
+                        'Dept': dept,
+                        'value': row[sub_model_name],
+                        'conf_lo': row[f'{sub_model_name}-lo-0.95'],
+                        'conf_hi': row[f'{sub_model_name}-hi-0.95']
+                    }
+                    results.append(result)
+
+            return results
+
+
+
         elif isinstance(model, ArimaReg):
             # Handling ARIMA model
             predictions = model.predict(forecast_data)
@@ -550,7 +577,7 @@ class ModelTimeForecast:
 
         ##
         elif isinstance(model, MLModelWrapper):
-            print(f"Processing predictions for model: {type(model).__name__} and department: {dept}")
+           # print(f"Processing predictions for model: {type(model).__name__} and department: {dept}")
 
             # Check if forecast_data is empty
             if forecast_data.empty:
@@ -682,38 +709,25 @@ class ModelTimeForecast:
 
             return future_data
 
-    # def _generate_future_forecast_data(self, model):
-    #     """
-    #     Generate future forecast data for the model.
-    #     """
-    #     if not self.forecast_horizon:
-    #         return None
 
-    #     periods = self._parse_forecast_horizon(self.forecast_horizon)
-    #     future_data = self._create_future_dataframe(periods)
-
-    #     # For Prophet model, ensure the 'ds' column is present
-    #     if isinstance(model, ProphetReg):
-    #         future_data = future_data.rename(columns={'date': 'ds'})
-    #     return future_data
-
-        ##
     ##
     def _get_model_type(self, model):
-
         """ Utility function to get the type of the model. """
         if isinstance(model, AutoGluonTabularWrapper):
-            return model.get_best_model() if hasattr(model, 'get_best_model') else 'AutoGluonTabular'
+            return 'AutoGluonTabular'
         elif isinstance(model, ProphetReg):
             return 'Prophet'
         elif isinstance(model, ArimaReg):
-            return model.description
+            return 'ARIMA'
         elif isinstance(model, H2OAutoMLWrapper):
-            return model.model.model_id if model.model is not None else 'H2O AutoML'
+            return 'H2O AutoML' if model.model is not None else 'H2O AutoML (Untrained)'
         elif isinstance(model, MLModelWrapper):
             return model.model.__class__.__name__  # Get the class name of the underlying model
+        elif isinstance(model, MLForecastWrapper):
+            return 'MLForecast Wrapper'  # New case for MLForecastWrapper
         else:
             return 'Unknown Model'
+
     def _calculate_confidence_interval(self, model, predicted_value):
         """
         Calculate confidence interval for a prediction.
@@ -737,3 +751,4 @@ class ModelTimeForecast:
          # Helper function to check if a value is numeric
     def is_numeric(value):
             return isinstance(value, (int, float))
+
