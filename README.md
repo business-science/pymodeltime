@@ -3,7 +3,7 @@
 - [Univariate Regression - Open in Colab](https://colab.research.google.com/drive/1CK6Zu_4lBYTkihyEQ1U_4wiViw2qjFBr?usp=sharing)
 - [Multiple_regression - Open in Colab](https://colab.research.google.com/drive/1V7q6Ems0oqzH5tRQVtYFMyvwESk217jG?usp=sharing)
 - [Demand Forecasting - Open in Colab](https://colab.research.google.com/drive/1JmtvcHIBj5Q8wnS40CTelWT7YUWK1g9g?usp=sharing)
-- [ml_forecast_pymodeltime - Open in Colab](https://colab.research.google.com/drive/1cticB4J1VNGDl4EBHXA8h2hHRNoAdZw1?usp=sharing)
+- [ml_forecast_pymodeltime - Open in Colab]()
 
 
 ### Installation
