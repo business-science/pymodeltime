@@ -12,6 +12,7 @@ from .pymodeltime.MLModelWrapper import*
 from .pymodeltime.H2OAutoMLWrapper import*
 from .pymodeltime.plot_modeltime_forecast_2 import*
 from .pymodeltime.MLForecastWrapper import*
+from .pymodeltime.evaluation import*
 # __all__ = [
 #     "ArimaReg",
 #     "ModelTimeAccuracy", 
