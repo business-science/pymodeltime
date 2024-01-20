@@ -40,7 +40,8 @@ setup(
         'pytimetk',
         'xgboost',
         'scikit-learn',
-        'h2o'
+        'h2o',
+        'mlforecast'
     ],
     package_data={
         'pymodeltime': ['data/*']
