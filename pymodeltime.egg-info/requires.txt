@@ -1,0 +1,16 @@
+autogluon
+autogluon
+h2o
+mlforecast
+pandas
+pip>=20.0
+pmdarima
+prophet
+pytimetk
+scikit-learn
+setuptools>=40.0
+statsmodels
+torch
+torchvision
+wheel>=0.30
+xgboost
