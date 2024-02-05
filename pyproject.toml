@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pymodeltime"
-version = "0.1.0"
+version = "0.0.0.9000"
 description = "The time series machine learning toolkit for Python."
 authors = [
     "Shafiullah Qureshi <qureshi.shafiullah@gmail.com>", 
@@ -20,18 +20,26 @@ repository = "https://github.com/business-science/pymodeltime"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-pandas = "^2.2.0"
-torch = "^2.2.0"
-torchvision = "^0.17.0"
-autogluon = "^1.0.0"
-prophet = "^1.1.5"
-pmdarima = "^2.0.4"
-statsmodels = "^0.14.1"
+pandas = ">=1.5.3"
+# statsmodels = "*"
+# scikit-learn = ">=0.23"
+# xgboost = "*"
+# prophet = "*"
+# pmdarima = "*"
+# mlforecast = "*"
+# autogluon = "*"
+# torch = ">=2.0.0"
+# torchvision = "*"
+# h2o = "*"
 pytimetk = "^0.3.0"
-xgboost = "^2.0.3"
 scikit-learn = "^1.4.0"
-h2o = "^3.44.0.3"
+xgboost = "^2.0.3"
+statsmodels = "^0.14.1"
+prophet = "^1.1.5"
 mlforecast = "^0.11.6"
+statsforecast = "^1.7.2"
+pmdarima = "^2.0.4"
+
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.25.2"
