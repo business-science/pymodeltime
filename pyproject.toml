@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "pymodeltime"
+version = "0.1.0"
+description = "The time series machine learning toolkit for Python."
+authors = [
+    "Shafiullah Qureshi <qureshi.shafiullah@gmail.com>", 
+    "Matt Dancho <mdancho@business-science.io>"
+]
+maintainers = [
+    "Shafiullah Qureshi <qureshi.shafiullah@gmail.com>", 
+    "Matt Dancho <mdancho@business-science.io>", 
+    "Plamen Rabadzhiyski <plamen@data-science-ai.com>"
+]
+include = ["data/*"]
+license = "LICENSE"
+readme = "README.md"
+keywords = ["time series", "forecasting", "machine learning", "data science"]
+repository = "https://github.com/business-science/pymodeltime"
+
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+pandas = "^2.2.0"
+torch = "^2.2.0"
+torchvision = "^0.17.0"
+autogluon = "^1.0.0"
+prophet = "^1.1.5"
+pmdarima = "^2.0.4"
+statsmodels = "^0.14.1"
+pytimetk = "^0.3.0"
+xgboost = "^2.0.3"
+scikit-learn = "^1.4.0"
+h2o = "^3.44.0.3"
+mlforecast = "^0.11.6"
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.25.2"
+pytest = "^7.4.2"
+
+[tool.poetry.group.docs.dependencies]
+quarto = "^0.1.0"
+quartodoc = "^0.6.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
